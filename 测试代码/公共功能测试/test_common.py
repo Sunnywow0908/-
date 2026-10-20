@@ -1,3 +1,4 @@
+from contextlib import closing
 """公共基础模块单元/集成测试：接口、数据库、数据完整性与可复用性。"""
 from pathlib import Path
 
@@ -51,7 +52,7 @@ def test_initialization_is_idempotent(tmp_path: Path):
     db_path = tmp_path / "idempotent.sqlite3"
     initialize_database(db_path)
     initialize_database(db_path)
-    with connect(db_path) as conn:
+    with closing(connect(db_path)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 6
         assert conn.execute("SELECT COUNT(*) FROM enrollments").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM schedules").fetchone()[0] == 4
@@ -60,7 +61,7 @@ def test_initialization_is_idempotent(tmp_path: Path):
 def test_foreign_key_checks_enabled(tmp_path: Path):
     db_path = tmp_path / "integrity.sqlite3"
     initialize_database(db_path)
-    with connect(db_path) as conn:
+    with closing(connect(db_path)) as conn:
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
         with pytest.raises(__import__("sqlite3").IntegrityError):
             conn.execute("INSERT INTO enrollments VALUES (?,?)", ("missing", "CS101"))
@@ -70,5 +71,5 @@ def test_database_path_can_be_injected_without_seed(tmp_path: Path):
     db_path = tmp_path / "isolation" / "empty.sqlite3"
     with TestClient(create_app(db_path, seed=False)) as client:
         assert client.get("/api/v1/health").status_code == 200
-    with connect(db_path) as conn:
+    with closing(connect(db_path)) as conn:
         assert conn.execute("SELECT COUNT(*) FROM courses").fetchone()[0] == 0

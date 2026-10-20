@@ -1,3 +1,4 @@
+from contextlib import closing
 """学生端功能与单元测试：用户故事 US-S01 / US-S02 / US-S03。"""
 import sqlite3
 
@@ -107,7 +108,7 @@ def test_service_weekday_names_are_complete():
 
 def test_service_is_read_only(client):
     """业务层列表查询不更改数据库行数。"""
-    with connect(client.app.state.db_path) as conn:
+    with closing(connect(client.app.state.db_path)) as conn:
         before = conn.execute("SELECT COUNT(*) FROM enrollments").fetchone()[0]
         list_my_courses(conn, "S2024001")
         get_timetable(conn, "S2024001", 1)

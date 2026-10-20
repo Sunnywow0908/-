@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Iterator
 
@@ -22,10 +23,11 @@ def initialize_database(db_path: Path, *, seed: bool = True) -> None:
     """建表和数据初始化支持重复调用，不清空已有数据库。"""
     db_path.parent.mkdir(parents=True, exist_ok=True)
     schema_path = Path(__file__).with_name("schema.sql")
-    with connect(db_path) as conn:
-        conn.executescript(schema_path.read_text(encoding="utf-8"))
-        if seed:
-            seed_demo(conn)
+    with closing(connect(db_path)) as conn:
+        with conn:
+            conn.executescript(schema_path.read_text(encoding="utf-8"))
+            if seed:
+                seed_demo(conn)
 
 
 def get_db(request: Request) -> Iterator[sqlite3.Connection]:

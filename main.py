@@ -1,7 +1,7 @@
 """Sprint 1 应用入口：公共模块和学生端的最小可运行增量。"""
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -32,7 +32,7 @@ def create_app(db_path: str | Path | None = None, *, seed: bool = True) -> FastA
     @app.get("/api/v1/health", tags=["公共基础模块"])
     def health():
         """轻量健康检查，同时验证数据库连接。"""
-        with connect(app.state.db_path) as conn:
+        with closing(connect(app.state.db_path)) as conn:
             conn.execute("SELECT 1").fetchone()
         return envelope("OK", "success", {"service": "sprint1-6a", "database": "ok"})
 
