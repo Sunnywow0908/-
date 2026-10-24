@@ -23,3 +23,9 @@ def client(tmp_path: Path):
 @pytest.fixture
 def student_headers() -> dict[str, str]:
     return {"X-Demo-User": "S2024001"}
+
+
+@pytest.fixture
+def teacher_headers() -> dict[str, str]:
+    """张老师：主讲 SE201、协讲 MA101，覆盖"一位教师多门课"的场景。"""
+    return {"X-Demo-User": "T003"}

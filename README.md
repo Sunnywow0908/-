@@ -1,6 +1,11 @@
-# Sprint 1 交付：公共基础模块 + 学生端（分工 6A）
+# Sprint 1 交付：公共基础模块 + 学生端 + 教师端
 
-《软件项目管理》实验二（代号“蜂鸟”）Sprint 1 可运行教学原型，**仅交付本人负责的 6A 子模块**：公共基础模块（含测试）和学生端（功能代码 + 单元测试 + 异常场景测试）。教师端、教研室主任端、教学督导端由其他成员分工交付，不在本仓库中冒充已经实现。
+《软件项目管理》实验二（代号“蜂鸟”）Sprint 1 可运行教学原型。仓库按功能分支交付两个子模块：
+
+- `feature/6a-common-student`：公共基础模块（含测试）与学生端（功能代码 + 单元测试 + 异常场景测试）；
+- **`feature/teacher`（本分支）**：教师端（功能代码 + 单元测试 + 异常场景测试），完整复用同一套公共基础模块。
+
+教研室主任端、教学督导端仍由其他成员分工交付，**不在本仓库中冒充已经实现**。
 
 > **需求来源与假设：**指导书要求本轮交付“代码能跑、基本测试、代码注释”，有分支策略、清晰提交记录、README。课程项目选择“爱教学”，学生端按照实验一 Sprint 1 切片中的“查看课表、浏览课程大纲详情”开展实现。仓库中 `US-S01`～`US-S03` 是**本子模块内部标识**，团队集成时需与实验一的真实故事编号对应。
 
@@ -13,8 +18,15 @@
 | 学生端 US-S02 | 按第 1～20 教学周查看本人课表（星期、节次、教室、授课教师、起止周） | 学生端切换教学周；请求 `/api/v1/students/me/timetable?week=10` |
 | 学生端 US-S03 | 查看本人已选修、已发布课程的课程大纲（简介、目标、章节、考核） | 点击“查看大纲”；请求 `/api/v1/students/me/courses/SE201/outline` |
 | 异常与边界 | 缺少演示身份、错误角色、身份不存在、课程未选修、课程未发布、周次不合法、SQL 注入式输入、数据库不可用 | `pytest -q 测试代码/异常情况测试` |
+| 教师端 US-T01 | 查看本人承担的全部授课课程（授课身份、选课人数、排课次数、大纲发布状态） | 打开教师端页面，或请求 `/api/v1/teachers/me/courses` |
+| 教师端 US-T02 | 按第 1～20 教学周查看本人授课安排（星期、节次、教室、起止周、主讲/协讲） | 教师端切换教学周；请求 `/api/v1/teachers/me/timetable?week=10` |
+| 教师端 US-T03 | 查看本人所授课程的选课名单 | 点击“名单”；请求 `/api/v1/teachers/me/courses/SE201/students` |
+| 教师端 US-T04 | 教学大纲草稿查看、保存、发布与撤回 | 教师端“大纲”面板；请求 `PUT …/outline` 与 `POST …/outline/publish` |
+| 教师端异常与边界 | 越权访问他人课程、大纲状态机冲突、请求体字段缺失/空白/超长/类型错误、越权写入无副作用 | `pytest -q 测试代码/异常情况测试` |
 
-**本项目是教学模拟，不包含正式登录、成绩录入、选课操作或真实个人信息。**当前接口使用 `X-Demo-User` 请求头模拟学生身份；它**不能替代真实身份认证**。后续 Sprint 上线前必须接入会话或 Token 校验及相应权限审计。
+**本项目是教学模拟，不包含正式登录、成绩录入、选课操作或真实个人信息。**当前接口使用 `X-Demo-User` 请求头模拟学生／教师身份；它**不能替代真实身份认证**。后续 Sprint 上线前必须接入会话或 Token 校验及相应权限审计。
+
+教师端的可见范围完全由 `course_teachers` 授课关系决定，而不是由课程上的展示名决定；所有按课程 id 的入口都会先校验授课权限，对他人课程统一返回 404，避免通过报错差异探测。
 
 ## 2. 交付目录
 
@@ -28,14 +40,19 @@ Sprint1_6A_student_core/
 │   │   ├── errors.py        # 标准响应与统一异常处理
 │   │   ├── schema.sql       # 公共数据表
 │   │   └── seed.py          # 幂等演示数据
-│   └── 学生端/
+│   ├── 学生端/
 │       ├── routes.py        # 学生端 API 和页面入口
 │       ├── service.py       # 选课/课表/大纲业务逻辑
 │       └── index.html       # 可直接交互的学生端展示界面
+│   └── 教师端/
+│       ├── routes.py        # 教师端 API 和页面入口
+│       ├── service.py       # 授课课程/课表/名单/大纲发布业务逻辑
+│       └── index.html       # 教师教学中心页面（风格与学生端一致）
 ├── 测试代码/
 │   ├── conftest.py          # pytest 临时数据库夹具
 │   ├── 公共功能测试/
 │   ├── 学生端测试/
+│   ├── 教师端测试/
 │   └── 异常情况测试/
 ├── docs/
 │   ├── REVIEW_CHECKLIST.md # 团队合并前人工审查清单
@@ -85,10 +102,11 @@ python run.py
 启动成功后访问：
 
 - **学生操作页面：** http://127.0.0.1:8000/student
+- **教师操作页面：** http://127.0.0.1:8000/teacher
 - **交互式接口文档：** http://127.0.0.1:8000/docs
 - **数据库健康检查：** http://127.0.0.1:8000/api/v1/health
 
-首次启动会自动建立 `data/sprint1.sqlite3` 并加载**虚构演示数据**。使用 `Ctrl+C` 停止服务。前端默认“学生甲”，可在右上角切换不同演示身份与教学周。
+首次启动会自动建立 `data/sprint1_backup.sqlite3` 并加载**虚构演示数据**。使用 `Ctrl+C` 停止服务。学生端默认“学生甲”，教师端默认“张老师”，均可在右上角切换演示身份与教学周。
 
 ## 4. 接口与请求示例
 
@@ -98,6 +116,13 @@ python run.py
 | GET | `/api/v1/students/me/courses` | 查询本人已选课程 | `X-Demo-User: S2024001` |
 | GET | `/api/v1/students/me/timetable?week=1` | 查询指定周个人课表 | 同上 |
 | GET | `/api/v1/students/me/courses/SE201/outline` | 查询已发布教学大纲 | 同上 |
+| GET | `/api/v1/teachers/me/courses` | 查询本人授课课程 | `X-Demo-User: T003` |
+| GET | `/api/v1/teachers/me/timetable?week=1` | 查询指定周授课安排 | 同上 |
+| GET | `/api/v1/teachers/me/courses/SE201/students` | 查询所授课程名单 | 同上 |
+| GET | `/api/v1/teachers/me/courses/AI999/outline` | 查询大纲草稿（未发布也可见） | 同上 |
+| PUT | `/api/v1/teachers/me/courses/AI999/outline` | 保存大纲草稿 | 同上 |
+| POST | `/api/v1/teachers/me/courses/AI999/outline/publish` | 发布大纲 | 同上 |
+| POST | `/api/v1/teachers/me/courses/AI999/outline/unpublish` | 撤回发布 | 同上 |
 
 例如在终端执行：
 
@@ -111,9 +136,20 @@ PowerShell 推荐使用：
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/students/me/timetable?week=10" -Headers @{"X-Demo-User"="S2024001"}
 ```
 
+教师端发布大纲的完整流程（先撤回 → 改草稿 → 再发布）：
+
+```powershell
+$h = @{"X-Demo-User"="T005"}
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/teachers/me/courses/AI999/outline/unpublish" -Headers $h
+Invoke-RestMethod -Method Put  -Uri "http://127.0.0.1:8000/api/v1/teachers/me/courses/AI999/outline" -Headers $h -ContentType "application/json" -Body '{"summary":"大模型工程实践","objectives":"掌握提示工程","chapters":"提示工程、评测体系","assessment":"项目作品"}'
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/api/v1/teachers/me/courses/AI999/outline/publish" -Headers $h
+```
+
 成功响应采用 `{"code":"OK","message":"success","data":{...}}`，异常响应采用 `{"code":"错误码","message":"提示","data":null}`。
 
-**演示用户**：`S2024001` 有 4 门选修课程，其中 1 门大纲未发布；`S2024002` 只选修 `SE201`；`S2024003` 尚无课程。`T001`（教师）、`D001`（主任）、`V001`（督导）会被学生端接口拒绝（403），可用于角色边界演示。
+**演示用户**：`S2024001` 有 4 门选修课程，其中 1 门大纲未发布；`S2024002` 只选修 `SE201`；`S2024003` 尚无课程。`D001`（主任）、`V001`（督导）会被学生端与教师端接口同时拒绝（403）。
+
+**演示教师**：`T001` 教师甲本轮未安排授课（空列表场景）；`T002` 李老师主讲 `CS101`；`T003` 张老师主讲 `SE201`、协讲 `MA101`（一人多课场景）；`T004` 王老师主讲 `MA101`；`T005` 赵老师主讲 `AI999`，该课大纲初始未发布，可用于演示发布流程。所有教师身份调用学生端接口都会返回 403。
 
 ## 5. 自动化测试
 
@@ -124,6 +160,7 @@ python -m pytest -q 测试代码
 # 可分开查看：
 python -m pytest -q 测试代码/公共功能测试
 python -m pytest -q 测试代码/学生端测试
+python -m pytest -q 测试代码/教师端测试
 python -m pytest -q 测试代码/异常情况测试
 ```
 
@@ -132,7 +169,8 @@ python -m pytest -q 测试代码/异常情况测试
 ## 6. 分支与提交要求（Git）
 
 - `main`：**仅放项目初始骨架**，用作集成基线。
-- `feature/6a-common-student`：**本人的 6A 功能分支**，各次业务/测试/修复均真实执行 `git commit`，保留在 ZIP 的 `.git/` 中。
+- `feature/6a-common-student`：**6A 功能分支**，交付公共基础模块与学生端。
+- `feature/teacher`：**教师端功能分支**（本分支），在 6A 基线上继续演进，每步业务与测试均独立提交。
 - 团队审查：从功能分支发起 PR 或合并请求，人工核查 diff 与测试结果，符合 DoD 后再合并到团队 `main`；**本 ZIP 不伪称已完成团队合并/远程推送**。
 
 查看证据：
@@ -141,6 +179,7 @@ python -m pytest -q 测试代码/异常情况测试
 git branch -a
 git log --all --graph --decorate --oneline
 git diff main...feature/6a-common-student --stat
+git diff feature/6a-common-student...feature/teacher --stat
 git status
 ```
 
@@ -154,6 +193,9 @@ git remote add origin https://github.com/你的组织/你的仓库.git
 # 如果 origin 已存在，应改为检查 git remote -v，避免直接覆盖
 # 如远程仓库已有项目历史，应先与团队沟通如何集成，切忌强推覆盖
 git push -u origin feature/6a-common-student
+
+git switch feature/teacher
+git push -u origin feature/teacher
 ```
 
 推荐提交到团队仓库 **同一条功能分支**，再由 DRI 组织 review。不要强推 `main`，不要直接将另一个仓库的无关历史覆盖掉。
@@ -161,6 +203,7 @@ git push -u origin feature/6a-common-student
 ## 7. DoD 与协作说明
 
 - [x] 已实现可运行的公共基础模块与学生端增量
+- [x] 已实现可运行的教师端增量（授课课程、课表、名单、大纲发布）
 - [x] 已执行自动化测试并通过（详见 `docs/TEST_REPORT.md`）
 - [x] 关键函数、数据库脚本及 API 有代码注释
 - [x] 已存在真实功能分支及多笔业务、测试、修复提交
@@ -172,6 +215,7 @@ git push -u origin feature/6a-common-student
 
 ## 8. 后续集成注意
 
-1. 学生端暂时是基于 REST API 的独立最小增量；另外三个角色端可重用 `users`、`courses`、`course_outlines`、`schedules` 和通用异常处理。
-2. 其他成员合入时，应先统一代码技术栈、数据库设计、接口路径与实验一故事编号；禁止为了合并而覆盖已存在的组内真实代码。
-3. 演示数据和认证方式仅供本轮 4 学时教学 Sprint 使用，不代表可投入正式生产。
+1. 学生端与教师端共用 `users`、`courses`、`course_outlines`、`schedules`、`course_teachers` 和通用异常处理；教研室主任端与教学督导端可继续复用。
+2. 教师端新增的 `course_teachers` 表是纯新增结构，旧的 `sprint1.sqlite3` 备份库可直接被 `schema.sql` 的 `CREATE TABLE IF NOT EXISTS` 升级，无需手工迁移。
+3. 其他成员合入时，应先统一代码技术栈、数据库设计、接口路径与实验一故事编号；禁止为了合并而覆盖已存在的组内真实代码。
+4. 演示数据和认证方式仅供本轮 4 学时教学 Sprint 使用，不代表可投入正式生产。

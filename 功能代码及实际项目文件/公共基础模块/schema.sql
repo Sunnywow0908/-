@@ -1,4 +1,5 @@
--- Sprint 1 公共基础数据模型（为后续教师端、教研室主任端、教学督导端预留复用基础）
+-- Sprint 1 公共基础数据模型（学生端已交付，教师端在此基础上扩展；
+-- 教研室主任端、教学督导端继续复用同一套表结构与统一异常处理）
 PRAGMA foreign_keys=ON;
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
@@ -8,9 +9,17 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS courses (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    -- teacher_name 是面向学生的展示名；真正的授课归属以 course_teachers 为准。
     teacher_name TEXT NOT NULL,
     credits REAL NOT NULL CHECK (credits > 0),
     outline_published INTEGER NOT NULL DEFAULT 0 CHECK (outline_published IN (0, 1))
+);
+-- 教师端新增：教师与课程的授课关系。一门课可有多名教师（主讲/协讲），一名教师可承担多门课。
+CREATE TABLE IF NOT EXISTS course_teachers (
+    course_id TEXT NOT NULL REFERENCES courses(id),
+    teacher_id TEXT NOT NULL REFERENCES users(id),
+    duty TEXT NOT NULL DEFAULT '主讲' CHECK (duty IN ('主讲', '协讲')),
+    PRIMARY KEY (course_id, teacher_id)
 );
 CREATE TABLE IF NOT EXISTS enrollments (
     student_id TEXT NOT NULL REFERENCES users(id),
@@ -37,3 +46,4 @@ CREATE TABLE IF NOT EXISTS course_outlines (
 );
 CREATE INDEX IF NOT EXISTS idx_enrollments_student ON enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_course ON schedules(course_id);
+CREATE INDEX IF NOT EXISTS idx_course_teachers_teacher ON course_teachers(teacher_id);

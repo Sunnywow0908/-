@@ -1,4 +1,4 @@
-"""Sprint 1 应用入口：公共模块和学生端的最小可运行增量。"""
+"""Sprint 1 应用入口：公共模块、学生端与教师端的最小可运行增量。"""
 from __future__ import annotations
 
 from contextlib import asynccontextmanager, closing
@@ -39,6 +39,8 @@ def create_app(db_path: str | Path | None = None, *, seed: bool = True) -> FastA
     # 通过延迟导入保持公共模块与学生端的职责边界清晰。
     from 功能代码及实际项目文件.学生端.routes import router
     app.include_router(router)
+    from 功能代码及实际项目文件.教师端.routes import router as teacher_router
+    app.include_router(teacher_router)
     return app
 
 

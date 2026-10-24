@@ -53,9 +53,28 @@ def test_initialization_is_idempotent(tmp_path: Path):
     initialize_database(db_path)
     initialize_database(db_path)
     with closing(connect(db_path)) as conn:
-        assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 6
+        assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 10
         assert conn.execute("SELECT COUNT(*) FROM enrollments").fetchone()[0] == 5
         assert conn.execute("SELECT COUNT(*) FROM schedules").fetchone()[0] == 4
+        assert conn.execute("SELECT COUNT(*) FROM course_teachers").fetchone()[0] == 5
+
+
+def test_course_teachers_links_real_users_and_courses(tmp_path: Path):
+    """授课关系两端都必须指向真实用户与课程，避免出现孤儿授权。"""
+    db_path = tmp_path / "assignment.sqlite3"
+    initialize_database(db_path)
+    with closing(connect(db_path)) as conn:
+        orphans = conn.execute(
+            """SELECT COUNT(*) FROM course_teachers AS ct
+               LEFT JOIN users AS u ON u.id = ct.teacher_id
+               LEFT JOIN courses AS c ON c.id = ct.course_id
+               WHERE u.id IS NULL OR c.id IS NULL OR u.role <> 'teacher'"""
+        ).fetchone()[0]
+        co_teaching = conn.execute(
+            "SELECT COUNT(*) FROM course_teachers WHERE course_id = 'MA101'"
+        ).fetchone()[0]
+    assert orphans == 0
+    assert co_teaching == 2
 
 
 def test_foreign_key_checks_enabled(tmp_path: Path):
