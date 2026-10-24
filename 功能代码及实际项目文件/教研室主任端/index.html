@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprint 1 · 教研室主任端课程与开课情况</title>
+  <style>
+    :root { color-scheme:light; --ink:#1c2a43; --sub:#63718a; --primary:#2956ce; --bg:#f2f5fa; --border:#dfe6f0; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:system-ui,"Microsoft YaHei",sans-serif; color:var(--ink); background:var(--bg); }
+    header { background:#142b56; color:white; padding:22px max(24px,calc((100vw - 1140px)/2)); display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    header small { display:block; margin-bottom:5px; color:#b9cbe9; letter-spacing:1px; }
+    header strong { font-size:21px; }
+    .pill { border:1px solid #6d83ad; padding:6px 12px; border-radius:30px; color:#dbe6ff; font-size:12px; }
+    main { max-width:1140px; margin:28px auto; padding:0 24px 40px; }
+    .intro { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
+    h1 { margin:0 0 7px; font-size:25px; } .muted { color:var(--sub); font-size:14px; margin:0; }
+    .controls { display:flex; gap:9px; flex-wrap:wrap; align-items:center; }
+    select,button { font:inherit; border-radius:9px; padding:10px 12px; border:1px solid var(--border); background:white; color:var(--ink); }
+    button { cursor:pointer; } button.primary { background:var(--primary); color:white; border-color:var(--primary); }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .grid { display:grid; grid-template-columns: 1.3fr 1fr; gap:20px; }
+    section { border-radius:16px; background:white; border:1px solid var(--border); box-shadow:0 8px 28px #1532510a; overflow:hidden; }
+    .section-title { padding:21px 23px 14px; display:flex; align-items:center; justify-content:space-between; }
+    h2 { margin:0; font-size:18px; } .count { color:var(--sub); font-size:12px; }
+    .rows { padding:0 16px 16px; }
+    .class-item,.course-item { margin:7px 0; padding:15px; border:1px solid #e7ecf5; border-radius:12px; background:#fafcff; }
+    .class-item { display:flex; align-items:center; gap:14px; }
+    .day { min-width:52px; background:#e9effe; color:#224db0; text-align:center; border-radius:9px; padding:9px 4px; font-weight:700; font-size:13px; }
+    .grow { flex:1; min-width:0; } .rowtop { font-weight:700; margin-bottom:5px; }
+    .rowmeta { font-size:12px; color:var(--sub); line-height:1.7; }
+    .course-item { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .course-item .actions { display:flex; gap:7px; flex-shrink:0; }
+    .course-item button { white-space:nowrap; color:var(--primary); padding:8px 10px; }
+    .course-item.active { border-color:var(--primary); background:#f2f6ff; }
+    .duty { display:inline-block; margin-left:7px; padding:1px 8px; border-radius:20px; background:#e9effe; color:#224db0; font-size:11px; font-weight:600; vertical-align:middle; }
+    .duty.assist { background:#f1f0fb; color:#5b4bb0; }
+    .tag { display:inline-block; margin-left:7px; padding:1px 8px; border-radius:20px; font-size:11px; font-weight:600; vertical-align:middle; }
+    .tag.live { background:#e6f6ed; color:#1c7a46; } .tag.draft { background:#fdf0e3; color:#9c5a12; }
+    .empty { padding:35px 10px; text-align:center; color:var(--sub); font-size:14px; }
+    .note { margin-top:18px; color:var(--sub); font-size:12px; line-height:1.7; }
+    #status { min-height:22px; margin-bottom:10px; color:#a73b20; font-size:13px; }
+    .form-body { padding:0 23px 22px; }
+    .field { margin-bottom:13px; } .field label { display:block; font-size:12px; color:var(--sub); margin-bottom:5px; }
+    .field textarea { width:100%; font:inherit; font-size:13px; line-height:1.6; padding:10px 12px; border:1px solid var(--border); border-radius:9px; color:var(--ink); background:#fbfcfe; resize:vertical; }
+    .field textarea:disabled { background:#f1f3f8; color:#8b95a8; }
+    .form-actions { display:flex; gap:9px; flex-wrap:wrap; }
+    dialog { border:0; padding:0; width:min(620px,calc(100vw - 32px)); border-radius:16px; box-shadow:0 20px 65px #142c4c55; }
+    dialog::backdrop { background:#14223b80; } .modal-head { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid var(--border); }
+    .modal-body { padding:8px 16px 16px; max-height:60vh; overflow:auto; }
+    @media(max-width:800px) { .grid { grid-template-columns:1fr; } header { padding:20px 24px; } }
+  
+    .filters { margin-bottom:20px; }
+    input { font:inherit; border-radius:9px; padding:10px 12px; border:1px solid var(--border); background:white; color:var(--ink); width:160px; }
+    .filters label { font-size:14px; }
+    .filters select { min-width:150px; }
+    .modal-body { padding:22px 24px; }
+    .modal-body h3 { font-size:13px; color:#254da6; margin:18px 0 8px; }
+    .modal-body p { font-size:14px; line-height:1.7; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .rowtop { line-height:1.6; overflow-wrap:anywhere; }
+    #status.loading { color:var(--sub); }
+    .intro .controls select { max-width:100%; }
+    @media(max-width:520px) { .intro .controls { width:100%; } .intro .controls select { flex:1; min-width:0; } .course-item { flex-wrap:wrap; } .filters { gap:8px; } input { width:150px; } }
+  </style>
+</head>
+<body>
+  <header><div><small>SPRINT 1 · 教学管理系统</small><strong>教研室主任中心</strong></div><span class="pill">功能原型 · 主任端</span></header>
+  <main>
+    <div class="intro">
+      <div><h1>教师课程与开课管理</h1><p class="muted">查看本教研室教师课程简介、授课身份与学期开课情况</p></div>
+      <div class="controls">
+        <label for="director">演示身份</label>
+        <select id="director">
+          <option value="D001">主任甲 · D001（软件工程）</option>
+          <option value="D002">主任乙 · D002（数学）</option>
+          <option value="D003">主任丙 · D003（空教研室）</option>
+          <option value="S2024001">学生甲 · S2024001（权限验证）</option>
+        </select>
+        <button class="primary" id="refresh">刷新</button>
+      </div>
+    </div>
+    <div class="controls filters">
+      <label for="teacher">任课教师</label><select id="teacher"><option value="">全部教师</option></select>
+      <label for="semester">学期</label><input id="semester" value="2026-2027-1" placeholder="全部学期" aria-label="学期，如2026-2027-1，留空查询全部">
+      <button id="query">查询</button>
+      <span class="count">学期仅筛选开课情况</span>
+    </div>
+    <div id="status" role="status" aria-live="polite"></div>
+    <div class="grid">
+      <section><div class="section-title"><h2>教师开课情况</h2><span id="offering-count" class="count"></span></div><div id="offerings" class="rows"></div></section>
+      <section><div class="section-title"><h2>教师课程简介</h2><span id="course-count" class="count"></span></div><div id="courses" class="rows"></div></section>
+    </div>
+    <p class="note">演示说明：当前用 X-Demo-User 请求头切换预置主任身份，仅用于 Sprint 1 功能展示；可见范围由主任管理的教研室及教师归属决定。正式上线需要接入真实登录鉴权与权限审计。测试数据均为虚构。</p>
+  </main>
+  <dialog id="summary"><div class="modal-head"><h2 id="summary-title">课程简介</h2><button id="close-summary" aria-label="关闭课程简介">关闭</button></div><div id="summary-body" class="modal-body"></div></dialog>
+  <script>
+    const $ = id => document.getElementById(id);
+    let generation = 0;
+    let detailGeneration = 0;
+    function make(tag, text, className) {
+      const el = document.createElement(tag);
+      if (text !== undefined) el.textContent = text;
+      if (className) el.className = className;
+      return el;
+    }
+    function empty(parent, text) { parent.replaceChildren(make('div', text, 'empty')); }
+    function dutyBadge(duty) { return make('span', duty, `duty${duty === '协讲' ? ' assist' : ''}`); }
+    async function api(path, user) {
+      let response;
+      try { response = await fetch('/api/v1/directors/me/' + path, { headers: { 'X-Demo-User': user } }); }
+      catch (_) { throw new Error('连接失败，请检查服务是否启动后重试'); }
+      let payload;
+      try { payload = await response.json(); }
+      catch (_) { throw new Error('服务响应异常，请稍后重试'); }
+      if (!response.ok) throw new Error(payload.message || `请求失败 (${response.status})`);
+      return payload.data;
+    }
+    function clearLists(message) {
+      $('course-count').textContent = '';
+      $('offering-count').textContent = '';
+      empty($('courses'), message);
+      empty($('offerings'), message);
+    }
+    function renderOfferings(data) {
+      const parent = $('offerings'); parent.replaceChildren();
+      $('offering-count').textContent = `${data.total} 条开课记录`;
+      if (!data.items.length) { empty(parent, '当前条件下暂无开课记录'); return; }
+      data.items.forEach(item => {
+        const line = make('article', undefined, 'class-item');
+        const details = make('div', undefined, 'grow');
+        const top = make('div', item.course_name, 'rowtop'); top.append(dutyBadge(item.duty));
+        details.append(top,
+          make('div', `${item.course_id} · ${item.teacher_name} · ${item.teacher_id}`, 'rowmeta'),
+          make('div', `${item.semester} 学期 · ${item.teaching_class}`, 'rowmeta'));
+        line.append(details); parent.append(line);
+      });
+    }
+    function renderCourses(data, user, token) {
+      const parent = $('courses'); parent.replaceChildren();
+      $('course-count').textContent = `${data.total} 条教师课程记录`;
+      if (!data.items.length) { empty(parent, '当前条件下暂无教师课程'); return; }
+      data.items.forEach(item => {
+        const line = make('article', undefined, 'course-item');
+        const details = make('div', undefined, 'grow');
+        const top = make('div', item.course_name, 'rowtop');
+        top.append(dutyBadge(item.duty), make('span', item.outline_published ? '已发布' : '未发布', `tag ${item.outline_published ? 'live' : 'draft'}`));
+        details.append(top, make('div', `${item.course_id} · ${item.teacher_name} · ${item.teacher_id}`, 'rowmeta'));
+        const actions = make('div', undefined, 'actions');
+        const button = make('button', item.summary_available ? '查看简介' : (item.outline_published ? '暂无简介' : '简介未发布'));
+        button.disabled = !item.summary_available;
+        button.addEventListener('click', () => showSummary(item.course_id, user, token, button));
+        actions.append(button); line.append(details, actions); parent.append(line);
+      });
+    }
+    async function showSummary(courseId, user, token, button) {
+      if (token !== generation || user !== $('director').value) return;
+      const request = ++detailGeneration;
+      button.disabled = true; $('status').textContent = ''; $('status').className = '';
+      try {
+        const data = await api(`courses/${encodeURIComponent(courseId)}/summary`, user);
+        if (request !== detailGeneration || token !== generation || user !== $('director').value) return;
+        $('summary-title').textContent = `${data.course_name} · 课程简介`;
+        const body = $('summary-body'); body.replaceChildren();
+        const teachers = data.teachers.map(item => `${item.teacher_name}（${item.duty}）`).join('、');
+        [['课程编号', data.course_id], ['任课教师', teachers], ['课程简介', data.summary]].forEach(([title, content]) => {
+          body.append(make('h3', title), make('p', content));
+        });
+        if (!$('summary').open) $('summary').showModal();
+      } catch (error) { if (request === detailGeneration && token === generation) $('status').textContent = error.message; }
+      finally { button.disabled = false; }
+    }
+    async function refresh(resetTeachers = false) {
+      const token = ++generation;
+      ++detailGeneration;
+      const user = $('director').value;
+      if ($('summary').open) $('summary').close();
+      $('status').textContent = '正在加载…'; $('status').className = 'loading';
+      $('refresh').disabled = true; $('query').disabled = true;
+      clearLists('正在加载…');
+      try {
+        if (resetTeachers) {
+          $('teacher').replaceChildren(new Option('全部教师', ''));
+          const teachers = await api('teachers', user);
+          if (token !== generation) return;
+          teachers.items.forEach(item => $('teacher').add(new Option(`${item.teacher_name} · ${item.teacher_id}`, item.teacher_id)));
+        }
+        const params = new URLSearchParams();
+        if ($('teacher').value) params.set('teacher_id', $('teacher').value);
+        const courseParams = params.toString();
+        if ($('semester').value.trim()) params.set('semester', $('semester').value.trim());
+        const [offerings, courses] = await Promise.all([
+          api('offerings?' + params.toString(), user), api('courses?' + courseParams, user)
+        ]);
+        if (token !== generation) return;
+        renderOfferings(offerings); renderCourses(courses, user, token);
+        $('status').textContent = ''; $('status').className = '';
+      } catch (error) {
+        if (token !== generation) return;
+        clearLists('暂无可显示的数据');
+        $('status').textContent = error.message; $('status').className = '';
+      } finally {
+        if (token === generation) { $('refresh').disabled = false; $('query').disabled = false; }
+      }
+    }
+    $('refresh').addEventListener('click', () => refresh());
+    $('query').addEventListener('click', () => refresh());
+    $('teacher').addEventListener('change', () => refresh());
+    $('semester').addEventListener('change', () => refresh());
+    $('semester').addEventListener('keydown', event => { if (event.key === 'Enter') refresh(); });
+    $('director').addEventListener('change', () => refresh(true));
+    $('close-summary').addEventListener('click', () => { ++detailGeneration; $('summary').close(); });
+    refresh(true);
+  </script>
+</body>
+</html>
